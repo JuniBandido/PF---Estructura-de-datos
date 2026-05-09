@@ -237,21 +237,15 @@ class ArbolAVL:
             n.altura = 1 + max(self._alt(n.izq), self._alt(n.der))
 
     def _rot_der(self, y):
-        x = y.izq;
-        t = x.der
-        x.der = y;
-        y.izq = t
-        self._act(y);
-        self._act(x)
+        x = y.izq; t = x.der
+        x.der = y; y.izq = t
+        self._act(y); self._act(x)
         return x
 
     def _rot_izq(self, x):
-        y = x.der;
-        t = y.izq
-        y.izq = x;
-        x.der = t
-        self._act(x);
-        self._act(y)
+        y = x.der; t = y.izq
+        y.izq = x; x.der = t
+        self._act(x); self._act(y)
         return y
 
     def _balancear(self, n):
