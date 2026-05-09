@@ -5,7 +5,6 @@ COLORES = {
     "encabezado": "#1565C0",
     "texto_encabezado": "#FFFFFF",
     "subtexto": "#90CAF9",
-
     "barra_lateral": "#FFFFFF",
     "barra_info": "#E3F2FD",
     "canvas": "#F4F9FD",
@@ -20,6 +19,9 @@ class FlowTreeUI(tk.Tk):
 
         self.title("FlowTree")
         self.geometry("1200x700")
+
+        self.minsize(900, 600)
+
         self.configure(bg=COLORES["fondo"])
 
         self.construir_ui()
@@ -57,14 +59,21 @@ class FlowTreeUI(tk.Tk):
         etiqueta_altura = tk.Label(barra_info,text="Altura: -",bg=COLORES["barra_info"],font=("Segoe UI", 10, "bold"))
         etiqueta_altura.pack(side="left", padx=20)
 
+        tk.Frame(barra_info,bg=COLORES["separador"],width=1).pack(side="left", fill="y", pady=8)
+
         etiqueta_nodos = tk.Label(barra_info,text="Nodos: -",bg=COLORES["barra_info"],font=("Segoe UI", 10, "bold"))
         etiqueta_nodos.pack(side="left", padx=20)
+
+        tk.Frame(barra_info,bg=COLORES["separador"],width=1).pack(side="left", fill="y", pady=8)
 
         etiqueta_raiz = tk.Label(barra_info,text="Raíz: -",bg=COLORES["barra_info"],font=("Segoe UI", 10, "bold"))
         etiqueta_raiz.pack(side="left", padx=20)
 
-        self.canvas_arbol = tk.Canvas(panel_derecho,bg=COLORES["canvas"],highlightthickness=0)
+        self.canvas_arbol = tk.Canvas(panel_derecho,bg=COLORES["canvas"],highlightthickness=0,bd=0)
+
         self.canvas_arbol.pack(fill="both",expand=True,padx=10,pady=10)
+
+        self.canvas_arbol.create_text(450,250,text="El árbol está vacío",fill="#90A4AE",font=("Segoe UI", 16))
 
 
 if __name__ == "__main__":
