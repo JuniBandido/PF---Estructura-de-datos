@@ -118,8 +118,6 @@ class ArbolBinario:
         self.raiz = None
 
 class ArbolBST(ArbolBinario):
-    """Árbol binario de búsqueda."""
-
     def insertar(self, valor):
         self.raiz, camino = self._insertar(self.raiz, valor, [])
         return camino
@@ -174,8 +172,6 @@ class ArbolBST(ArbolBinario):
 
 
 class ArbolAVL:
-    """Árbol AVL con auto-balanceo."""
-
     def __init__(self):
         self.raiz = None
 
