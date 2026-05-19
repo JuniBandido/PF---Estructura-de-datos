@@ -1,82 +1,95 @@
-import tkinter as tk
+import sys
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,QLabel, QPushButton, QLineEdit, QFrame)
+from PyQt5.QtCore import Qt
 
-COLORES = {
-    "fondo": "#F4F9FD",
-    "encabezado": "#1565C0",
-    "texto_encabezado": "#FFFFFF",
-    "subtexto": "#90CAF9",
-    "barra_lateral": "#FFFFFF",
-    "barra_info": "#E3F2FD",
-    "canvas": "#F4F9FD",
-    "separador": "#BBDEFB"
-}
-
-
-class FlowTreeUI(tk.Tk):
-
+class CanvasPlaceholder(QWidget):
     def __init__(self):
         super().__init__()
+        self.setStyleSheet("background: #15132A;")
+        self.label = QLabel("Árbol vacío\n(Los botones aún no insertan nodos reales)", self)
+        self.label.setAlignment(Qt.AlignCenter)
+        self.label.setStyleSheet("color: #6B6890; font-size: 14px;")
 
-        self.title("FlowTree")
-        self.geometry("1200x700")
+    def resizeEvent(self, event):
+        self.label.resize(self.size())
+        super().resizeEvent(event)
 
-        self.minsize(900, 600)
+class FlowTreeV2(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("FlowTree v2 - Esqueleto de operaciones")
+        self.setMinimumSize(900, 600)
 
-        self.configure(bg=COLORES["fondo"])
+        central = QWidget()
+        central.setStyleSheet("background: #1C1A2E;")
+        self.setCentralWidget(central)
 
-        self.construir_ui()
+        main_layout = QHBoxLayout(central)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
 
-    def construir_ui(self):
-        encabezado = tk.Frame(self,bg=COLORES["encabezado"],height=60)
-        encabezado.pack(fill="x")
-        encabezado.pack_propagate(False)
+        self.canvas = CanvasPlaceholder()
+        main_layout.addWidget(self.canvas, 1)
 
-        titulo = tk.Label(encabezado,text="FlowTree",bg=COLORES["encabezado"],fg=COLORES["texto_encabezado"],font=("Segoe UI", 18, "bold"))
-        titulo.pack(side="left", padx=20)
+        sidebar = QFrame()
+        sidebar.setFixedWidth(220)
+        sidebar.setStyleSheet("background: #211F35; border-left: 1px solid #2D2B45;")
+        sidebar_layout = QVBoxLayout(sidebar)
+        sidebar_layout.setContentsMargins(12, 20, 12, 20)
+        sidebar_layout.setSpacing(12)
 
-        subtitulo = tk.Label(encabezado,text="Visualizador de Árboles",bg=COLORES["encabezado"],fg=COLORES["subtexto"],font=("Segoe UI", 10))
-        subtitulo.pack(side="left")
+        lbl_ins = QLabel("INSERTAR NODO")
+        lbl_ins.setStyleSheet("color: #8B87B8; font-size: 10px;")
+        self.ent_insertar = QLineEdit()
+        self.ent_insertar.setPlaceholderText("Valor entero...")
+        self.ent_insertar.setStyleSheet("background: #2D2B45; border-radius: 6px; padding: 6px;")
+        btn_insertar = QPushButton("Insertar")
+        btn_insertar.clicked.connect(self.mock_insertar)
 
-        contenedor = tk.Frame(self,bg=COLORES["fondo"])
-        contenedor.pack(fill="both", expand=True)
+        lbl_be = QLabel("BUSCAR / ELIMINAR")
+        lbl_be.setStyleSheet("color: #8B87B8; font-size: 10px; margin-top: 10px;")
+        self.ent_buscar = QLineEdit()
+        self.ent_buscar.setPlaceholderText("Valor...")
+        self.ent_buscar.setStyleSheet("background: #2D2B45; border-radius: 6px; padding: 6px;")
+        btn_buscar = QPushButton("Buscar")
+        btn_buscar.clicked.connect(self.mock_buscar)
+        btn_eliminar = QPushButton("Eliminar")
+        btn_eliminar.clicked.connect(self.mock_eliminar)
 
-        barra_lateral = tk.Frame(contenedor,bg=COLORES["barra_lateral"],width=280)
+        for btn in (btn_insertar, btn_buscar, btn_eliminar):
+            btn.setStyleSheet("""
+                QPushButton {
+                    background: #7C3AED; color: white; border: none;
+                    border-radius: 6px; padding: 8px; font-weight: bold;
+                }
+                QPushButton:hover { background: #6D28D9; }
+            """)
 
-        barra_lateral.pack(side="left", fill="y")
-        barra_lateral.pack_propagate(False)
+        sidebar_layout.addWidget(lbl_ins)
+        sidebar_layout.addWidget(self.ent_insertar)
+        sidebar_layout.addWidget(btn_insertar)
+        sidebar_layout.addWidget(lbl_be)
+        sidebar_layout.addWidget(self.ent_buscar)
+        sidebar_layout.addWidget(btn_buscar)
+        sidebar_layout.addWidget(btn_eliminar)
+        sidebar_layout.addStretch()
 
-        linea = tk.Frame(contenedor,bg=COLORES["separador"],width=1)
-        linea.pack(side="left", fill="y")
+        main_layout.addWidget(sidebar)
 
-        panel_derecho = tk.Frame(contenedor,bg=COLORES["fondo"])
-        panel_derecho.pack(side="left", fill="both", expand=True)
+    def mock_insertar(self):
+        print("Mock: insertar", self.ent_insertar.text())
+        self.ent_insertar.clear()
 
-        barra_info = tk.Frame(panel_derecho,bg=COLORES["barra_info"],height=40)
+    def mock_buscar(self):
+        print("Mock: buscar", self.ent_buscar.text())
 
-        barra_info.pack(fill="x")
-        barra_info.pack_propagate(False)
-
-        etiqueta_altura = tk.Label(barra_info,text="Altura: -",bg=COLORES["barra_info"],font=("Segoe UI", 10, "bold"))
-        etiqueta_altura.pack(side="left", padx=20)
-
-        tk.Frame(barra_info,bg=COLORES["separador"],width=1).pack(side="left", fill="y", pady=8)
-
-        etiqueta_nodos = tk.Label(barra_info,text="Nodos: -",bg=COLORES["barra_info"],font=("Segoe UI", 10, "bold"))
-        etiqueta_nodos.pack(side="left", padx=20)
-
-        tk.Frame(barra_info,bg=COLORES["separador"],width=1).pack(side="left", fill="y", pady=8)
-
-        etiqueta_raiz = tk.Label(barra_info,text="Raíz: -",bg=COLORES["barra_info"],font=("Segoe UI", 10, "bold"))
-        etiqueta_raiz.pack(side="left", padx=20)
-
-        self.canvas_arbol = tk.Canvas(panel_derecho,bg=COLORES["canvas"],highlightthickness=0,bd=0)
-
-        self.canvas_arbol.pack(fill="both",expand=True,padx=10,pady=10)
-
-        self.canvas_arbol.create_text(450,250,text="El árbol está vacío",fill="#90A4AE",font=("Segoe UI", 16))
-
+    def mock_eliminar(self):
+        print("Mock: eliminar", self.ent_buscar.text())
+        self.ent_buscar.clear()
 
 if __name__ == "__main__":
-
-    app = FlowTreeUI()
-    app.mainloop()
+    app = QApplication(sys.argv)
+    app.setStyle("Fusion")
+    ventana = FlowTreeV2()
+    ventana.show()
+    sys.exit(app.exec_())
