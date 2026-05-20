@@ -2,7 +2,7 @@ import sys
 import math
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QLineEdit, QFrame, QMessageBox
 from PyQt5.QtGui import QPainter, QPen, QBrush, QColor, QFont, QFont
-from PyQt5.QtCore import Qt, QPointF, QRectF
+from PyQt5.QtCore import Qt, QTimer, QPointF, QRectF
 
 P = {
     "fondo_deep":   "#15132A",
@@ -99,13 +99,48 @@ class ArbolBST:
             n = n.izq
         return n
 
+    def preorden(self):
+        return self._preorden(self.raiz)
+
+    def _preorden(self, n):
+        if not n: return []
+        return [n.valor] + self._preorden(n.izq) + self._preorden(n.der)
+
+    def inorden(self):
+        return self._inorden(self.raiz)
+
+    def _inorden(self, n):
+        if not n: return []
+        return self._inorden(n.izq) + [n.valor] + self._inorden(n.der)
+
+    def postorden(self):
+        return self._postorden(self.raiz)
+
+    def _postorden(self, n):
+        if not n: return []
+        return self._postorden(n.izq) + self._postorden(n.der) + [n.valor]
+
+    def altura(self):
+        return self._altura(self.raiz)
+
+    def _altura(self, n):
+        if not n: return 0
+        return 1 + max(self._altura(n.izq), self._altura(n.der))
+
+    def total(self):
+        return self._total(self.raiz)
+
+    def _total(self, n):
+        if not n: return 0
+        return 1 + self._total(n.izq) + self._total(n.der)
+
     def limpiar(self):
         self.raiz = None
 
 class CanvasArbol(QWidget):
     RADIO = 24
-    GAP_V = 70
-    INICIO_Y = 50
+    GAP_V = 82
+    INICIO_Y = 52
 
     def __init__(self):
         super().__init__()
@@ -150,8 +185,8 @@ class CanvasArbol(QWidget):
         if not nodo:
             return
         niveles[id(nodo)] = (nodo, self.INICIO_Y + prof * self.GAP_V, x, prof)
-        self._recorrer_pos(nodo.izq, prof + 1, x - 50 - prof * 10, niveles)
-        self._recorrer_pos(nodo.der, prof + 1, x + 50 + prof * 10, niveles)
+        self._recorrer_pos(nodo.izq, prof + 1, x - 60 - prof * 8, niveles)
+        self._recorrer_pos(nodo.der, prof + 1, x + 60 + prof * 8, niveles)
 
     def _pintar_aristas(self, painter, nodo, pos):
         if not nodo:
@@ -181,7 +216,7 @@ class CanvasArbol(QWidget):
             color_fondo = QColor(P["violeta"]) if encontrado else (QColor(P["fondo_card"]) if resalt else QColor(P["nodo_normal"]))
             color_borde = QColor(P["lila"]) if encontrado or resalt else QColor(P["borde_normal"])
             color_texto = QColor(P["lila_claro"]) if encontrado else (QColor(P["lila"]) if resalt else QColor(P["texto_med"]))
-            painter.setPen(QPen(color_borde, 1.5))
+            painter.setPen(QPen(color_borde, 2))
             painter.setBrush(QBrush(color_fondo))
             painter.drawEllipse(QPointF(x, y), self.RADIO, self.RADIO)
             painter.setPen(color_texto)
@@ -198,6 +233,8 @@ class FlowTree(QMainWindow):
         self.arbol = ArbolBST()
         self.resaltados = []
         self.encontrado = None
+        self._timer = QTimer()
+        self._timer.timeout.connect(self._limpiar_resaltado)
 
         central = QWidget()
         central.setStyleSheet(f"background: {P['fondo_panel']};")
@@ -206,14 +243,24 @@ class FlowTree(QMainWindow):
         raiz = QVBoxLayout(central)
         raiz.setContentsMargins(0, 0, 0, 0)
         raiz.setSpacing(0)
+
         raiz.addWidget(self._topbar())
 
         cuerpo = QHBoxLayout()
         cuerpo.setContentsMargins(0, 0, 0, 0)
         cuerpo.setSpacing(0)
 
+        area = QVBoxLayout()
+        area.setContentsMargins(0, 0, 0, 0)
+        area.setSpacing(0)
+        area.addWidget(self._barra_stats())
         self.canvas = CanvasArbol()
-        cuerpo.addWidget(self.canvas, 1)
+        area.addWidget(self.canvas, 1)
+        area.addWidget(self._barra_resultado())
+
+        canvas_container = QWidget()
+        canvas_container.setLayout(area)
+        cuerpo.addWidget(canvas_container, 1)
         cuerpo.addWidget(self._sidebar())
 
         raiz.addLayout(cuerpo)
@@ -235,6 +282,49 @@ class FlowTree(QMainWindow):
         badge.setStyleSheet(f"background: {P['fondo_sb']}; color: {P['texto_apag']}; font-size: 10px; padding: 4px 12px; border-radius: 16px;")
         layout.addWidget(badge)
         return bar
+
+    def _barra_stats(self):
+        barra = QFrame()
+        barra.setFixedHeight(44)
+        barra.setStyleSheet("background: transparent; border-bottom: 1px solid #2D2B45;")
+        layout = QHBoxLayout(barra)
+        layout.setContentsMargins(12, 0, 12, 0)
+        layout.addStretch()
+        self.stat_altura = self._chip_stat("ALTURA", "-")
+        self.stat_nodos = self._chip_stat("NODOS", "-")
+        self.stat_raiz = self._chip_stat("RAÍZ", "-")
+        for chip in (self.stat_altura, self.stat_nodos, self.stat_raiz):
+            layout.addWidget(chip)
+        return barra
+
+    def _chip_stat(self, label, valor):
+        chip = QFrame()
+        chip.setStyleSheet(f"background: {P['fondo_card']}; border: 1px solid {P['borde_normal']}; border-radius: 6px;")
+        layout = QHBoxLayout(chip)
+        layout.setContentsMargins(10, 6, 10, 6)
+        lbl = QLabel(label + ":")
+        lbl.setStyleSheet(f"font-size: 9px; color: {P['texto_apag']};")
+        val = QLabel(valor)
+        val.setStyleSheet(f"font-size: 12px; font-weight: 600; color: {P['texto_base']};")
+        chip._lbl_valor = val
+        layout.addWidget(lbl)
+        layout.addWidget(val)
+        return chip
+
+    def _barra_resultado(self):
+        barra = QFrame()
+        barra.setFixedHeight(32)
+        barra.setStyleSheet(f"background: {P['fondo_panel']}; border-top: 1px solid {P['borde_sb']};")
+        layout = QHBoxLayout(barra)
+        layout.setContentsMargins(14, 0, 14, 0)
+        tag = QLabel("Resultado:")
+        tag.setStyleSheet(f"font-size: 9px; color: {P['texto_apag']};")
+        self.lbl_resultado = QLabel("—")
+        self.lbl_resultado.setStyleSheet(f"font-size: 10px; color: {P['texto_med']}; font-family: monospace;")
+        layout.addWidget(tag)
+        layout.addWidget(self.lbl_resultado)
+        layout.addStretch()
+        return barra
 
     def _sidebar(self):
         contenedor = QFrame()
@@ -263,7 +353,16 @@ class FlowTree(QMainWindow):
         btn_eliminar = QPushButton("Eliminar")
         btn_eliminar.clicked.connect(self._eliminar)
 
-        for btn in (btn_insertar, btn_buscar, btn_eliminar):
+        lbl_rec = QLabel("RECORRIDOS")
+        lbl_rec.setStyleSheet(f"color: {P['texto_apag']}; font-size: 10px; margin-top: 10px;")
+        btn_pre = QPushButton("Preorden")
+        btn_pre.clicked.connect(self._preorden)
+        btn_in = QPushButton("Inorden")
+        btn_in.clicked.connect(self._inorden)
+        btn_post = QPushButton("Postorden")
+        btn_post.clicked.connect(self._postorden)
+
+        for btn in (btn_insertar, btn_buscar, btn_eliminar, btn_pre, btn_in, btn_post):
             btn.setStyleSheet(f"background: {P['violeta']}; color: white; border: none; border-radius: 6px; padding: 8px; font-weight: bold;")
             btn.setStyleSheet(btn.styleSheet() + f"QPushButton:hover {{ background: {P['violeta_med']}; }}")
 
@@ -274,6 +373,10 @@ class FlowTree(QMainWindow):
         layout.addWidget(self.ent_buscar)
         layout.addWidget(btn_buscar)
         layout.addWidget(btn_eliminar)
+        layout.addWidget(lbl_rec)
+        layout.addWidget(btn_pre)
+        layout.addWidget(btn_in)
+        layout.addWidget(btn_post)
         layout.addStretch()
         return contenedor
 
@@ -288,6 +391,8 @@ class FlowTree(QMainWindow):
         self.resaltados = camino
         self.encontrado = valor
         self._redibujar()
+        self._mostrar(f"Insertado: {valor}  Camino: {' > '.join(map(str, camino))}")
+        self._auto_limpiar(1800)
 
     def _buscar(self):
         try:
@@ -299,6 +404,11 @@ class FlowTree(QMainWindow):
         self.resaltados = camino
         self.encontrado = valor if nodo else None
         self._redibujar()
+        if nodo:
+            self._mostrar(f"Nodo {valor} encontrado  Camino: {' > '.join(map(str, camino))}")
+        else:
+            self._mostrar(f"Nodo {valor} no encontrado  Visitados: {' > '.join(map(str, camino))}")
+        self._auto_limpiar(2500)
 
     def _eliminar(self):
         try:
@@ -311,10 +421,56 @@ class FlowTree(QMainWindow):
         self.resaltados = []
         self.encontrado = None
         self._redibujar()
-        QMessageBox.information(self, "Eliminar", f"Eliminado: {ok}")
+        self._mostrar(f"Nodo {valor} {'eliminado' if ok else 'no existe'}")
+
+    def _preorden(self):
+        r = self.arbol.preorden()
+        self.resaltados = r
+        self.encontrado = None
+        self._redibujar()
+        self._auto_limpiar(3000)
+        self._mostrar_recorrido("Preorden", r)
+
+    def _inorden(self):
+        r = self.arbol.inorden()
+        self.resaltados = r
+        self.encontrado = None
+        self._redibujar()
+        self._auto_limpiar(3000)
+        self._mostrar_recorrido("Inorden", r)
+
+    def _postorden(self):
+        r = self.arbol.postorden()
+        self.resaltados = r
+        self.encontrado = None
+        self._redibujar()
+        self._auto_limpiar(3000)
+        self._mostrar_recorrido("Postorden", r)
+
+    def _mostrar_recorrido(self, nombre, resultado):
+        if not resultado:
+            self._mostrar(f"{nombre}: árbol vacío")
+        else:
+            self._mostrar(f"{nombre}: {' → '.join(map(str, resultado))}")
 
     def _redibujar(self):
+        self.stat_altura._lbl_valor.setText(str(self.arbol.altura()))
+        self.stat_nodos._lbl_valor.setText(str(self.arbol.total()))
+        raiz = self.arbol.raiz.valor if self.arbol.raiz else "-"
+        self.stat_raiz._lbl_valor.setText(str(raiz))
         self.canvas.actualizar(self.arbol, self.resaltados, self.encontrado)
+
+    def _mostrar(self, texto):
+        self.lbl_resultado.setText(texto)
+
+    def _auto_limpiar(self, ms):
+        self._timer.start(ms)
+
+    def _limpiar_resaltado(self):
+        self._timer.stop()
+        self.resaltados = []
+        self.encontrado = None
+        self._redibujar()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
