@@ -1,7 +1,6 @@
 import sys
 import math
 import json
-from collections import deque
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,QLabel, QPushButton, QLineEdit, QScrollArea, QFrame,QFileDialog, QMessageBox, QSizePolicy)
 from PyQt5.QtGui import QPainter, QPen, QBrush, QColor, QFont
 from PyQt5.QtCore import Qt, QTimer, QPointF, QRectF
@@ -17,6 +16,7 @@ P = {
     "violeta_med":  "#6D28D9",
     "lila":         "#A78BFA",
     "lila_claro":   "#C4B5FD",
+    "lila_fondo":   "#EDE9FE",
     "texto_base":   "#E2E0F0",
     "texto_med":    "#8B87B8",
     "texto_apag":   "#6B6890",
@@ -25,10 +25,11 @@ P = {
 
 class Nodo:
     def __init__(self, valor):
-        self.valor = valor
-        self.izq = None
-        self.der = None
-        self.altura = 1
+        self.valor  = valor
+        self.izq    = None
+        self.der    = None
+        self.altura = 1          # usado en AVL
+
 
 class ArbolBinario:
     def __init__(self):
@@ -38,6 +39,7 @@ class ArbolBinario:
         if not self.raiz:
             self.raiz = Nodo(valor)
             return []
+        from collections import deque
         cola = deque([self.raiz])
         while cola:
             n = cola.popleft()
@@ -51,18 +53,13 @@ class ArbolBinario:
             cola.append(n.der)
 
     def buscar(self, valor, nodo=None, primero=True):
-        if primero:
-            nodo = self.raiz
-        if not nodo:
-            return None, []
-        if nodo.valor == valor:
-            return nodo, [nodo.valor]
+        if primero: nodo = self.raiz
+        if nodo is None: return None, []
+        if nodo.valor == valor: return nodo, [nodo.valor]
         izq, pi = self.buscar(valor, nodo.izq, False)
-        if izq:
-            return izq, [nodo.valor] + pi
+        if izq: return izq, [nodo.valor] + pi
         der, pd = self.buscar(valor, nodo.der, False)
-        if der:
-            return der, [nodo.valor] + pd
+        if der: return der, [nodo.valor] + pd
         return None, [nodo.valor]
 
     def eliminar(self, valor):
@@ -70,74 +67,57 @@ class ArbolBinario:
         return ok
 
     def _eliminar(self, nodo, valor):
-        if not nodo:
-            return None, False
+        if nodo is None: return None, False
         if nodo.valor == valor:
-            if not nodo.izq and not nodo.der:
-                return None, True
-            if not nodo.izq:
-                return nodo.der, True
-            if not nodo.der:
-                return nodo.izq, True
+            if not nodo.izq and not nodo.der: return None, True
+            if not nodo.izq:  return nodo.der, True
+            if not nodo.der:  return nodo.izq, True
             s = self._minimo(nodo.der)
             nodo.valor = s.valor
             nodo.der, _ = self._eliminar(nodo.der, s.valor)
             return nodo, True
         nodo.izq, di = self._eliminar(nodo.izq, valor)
-        if di:
-            return nodo, True
+        if di: return nodo, True
         nodo.der, dd = self._eliminar(nodo.der, valor)
         return nodo, dd
 
     def _minimo(self, n):
-        while n.izq:
-            n = n.izq
+        while n.izq: n = n.izq
         return n
 
     def preorden(self, n=None, p=True):
-        if p:
-            n = self.raiz
-        if not n:
-            return []
+        if p: n = self.raiz
+        if n is None: return []
         return [n.valor] + self.preorden(n.izq, False) + self.preorden(n.der, False)
 
     def inorden(self, n=None, p=True):
-        if p:
-            n = self.raiz
-        if not n:
-            return []
+        if p: n = self.raiz
+        if n is None: return []
         return self.inorden(n.izq, False) + [n.valor] + self.inorden(n.der, False)
 
     def postorden(self, n=None, p=True):
-        if p:
-            n = self.raiz
-        if not n:
-            return []
+        if p: n = self.raiz
+        if n is None: return []
         return self.postorden(n.izq, False) + self.postorden(n.der, False) + [n.valor]
 
     def altura(self, n=None, p=True):
-        if p:
-            n = self.raiz
-        if not n:
-            return 0
+        if p: n = self.raiz
+        if n is None: return 0
         return 1 + max(self.altura(n.izq, False), self.altura(n.der, False))
 
     def total(self, n=None, p=True):
-        if p:
-            n = self.raiz
-        if not n:
-            return 0
+        if p: n = self.raiz
+        if n is None: return 0
         return 1 + self.total(n.izq, False) + self.total(n.der, False)
 
     def a_lista(self, n=None, p=True):
-        if p:
-            n = self.raiz
-        if not n:
-            return []
+        if p: n = self.raiz
+        if n is None: return []
         return [n.valor] + self.a_lista(n.izq, False) + self.a_lista(n.der, False)
 
     def limpiar(self):
         self.raiz = None
+
 
 class ArbolBST(ArbolBinario):
     def insertar(self, valor):
@@ -145,7 +125,7 @@ class ArbolBST(ArbolBinario):
         return camino
 
     def _insertar(self, nodo, valor, camino):
-        if not nodo:
+        if nodo is None:
             camino.append(valor)
             return Nodo(valor), camino
         camino.append(nodo.valor)
@@ -156,12 +136,9 @@ class ArbolBST(ArbolBinario):
         return nodo, camino
 
     def buscar(self, valor, nodo=None, p=True):
-        if p:
-            nodo = self.raiz
-        if not nodo:
-            return None, []
-        if nodo.valor == valor:
-            return nodo, [nodo.valor]
+        if p: nodo = self.raiz
+        if nodo is None: return None, []
+        if nodo.valor == valor: return nodo, [nodo.valor]
         if valor < nodo.valor:
             n, c = self.buscar(valor, nodo.izq, False)
         else:
@@ -173,67 +150,44 @@ class ArbolBST(ArbolBinario):
         return ok
 
     def _elim(self, nodo, valor):
-        if not nodo:
-            return None, False
+        if nodo is None: return None, False
         if valor < nodo.valor:
-            nodo.izq, d = self._elim(nodo.izq, valor)
-            return nodo, d
+            nodo.izq, d = self._elim(nodo.izq, valor); return nodo, d
         if valor > nodo.valor:
-            nodo.der, d = self._elim(nodo.der, valor)
-            return nodo, d
-        if not nodo.izq and not nodo.der:
-            return None, True
-        if not nodo.izq:
-            return nodo.der, True
-        if not nodo.der:
-            return nodo.izq, True
+            nodo.der, d = self._elim(nodo.der, valor); return nodo, d
+        if not nodo.izq and not nodo.der: return None, True
+        if not nodo.izq: return nodo.der, True
+        if not nodo.der: return nodo.izq, True
         s = self._minimo(nodo.der)
         nodo.valor = s.valor
         nodo.der, _ = self._elim(nodo.der, s.valor)
         return nodo, True
 
+
 class ArbolAVL:
     def __init__(self):
         self.raiz = None
 
-    def _h(self, n):
-        return n.altura if n else 0
-
-    def _bf(self, n):
-        return self._h(n.izq) - self._h(n.der) if n else 0
-
+    def _h(self, n):  return n.altura if n else 0
+    def _bf(self, n): return self._h(n.izq) - self._h(n.der) if n else 0
     def _act(self, n):
-        if n:
-            n.altura = 1 + max(self._h(n.izq), self._h(n.der))
+        if n: n.altura = 1 + max(self._h(n.izq), self._h(n.der))
 
     def _rot_der(self, y):
-        x = y.izq
-        T = x.der
-        x.der = y
-        y.izq = T
-        self._act(y)
-        self._act(x)
-        return x
+        x = y.izq; T = x.der; x.der = y; y.izq = T
+        self._act(y); self._act(x); return x
 
     def _rot_izq(self, x):
-        y = x.der
-        T = y.izq
-        y.izq = x
-        x.der = T
-        self._act(x)
-        self._act(y)
-        return y
+        y = x.der; T = y.izq; y.izq = x; x.der = T
+        self._act(x); self._act(y); return y
 
     def _bal(self, n):
-        self._act(n)
-        bf = self._bf(n)
+        self._act(n); bf = self._bf(n)
         if bf > 1:
-            if self._bf(n.izq) < 0:
-                n.izq = self._rot_izq(n.izq)
+            if self._bf(n.izq) < 0: n.izq = self._rot_izq(n.izq)
             return self._rot_der(n)
         if bf < -1:
-            if self._bf(n.der) > 0:
-                n.der = self._rot_der(n.der)
+            if self._bf(n.der) > 0: n.der = self._rot_der(n.der)
             return self._rot_izq(n)
         return n
 
@@ -242,9 +196,8 @@ class ArbolAVL:
         return camino
 
     def _insertar(self, nodo, valor, camino):
-        if not nodo:
-            camino.append(valor)
-            return Nodo(valor), camino
+        if nodo is None:
+            camino.append(valor); return Nodo(valor), camino
         camino.append(nodo.valor)
         if valor < nodo.valor:
             nodo.izq, camino = self._insertar(nodo.izq, valor, camino)
@@ -255,12 +208,9 @@ class ArbolAVL:
         return self._bal(nodo), camino
 
     def buscar(self, valor, nodo=None, p=True):
-        if p:
-            nodo = self.raiz
-        if not nodo:
-            return None, []
-        if nodo.valor == valor:
-            return nodo, [nodo.valor]
+        if p: nodo = self.raiz
+        if nodo is None: return None, []
+        if nodo.valor == valor: return nodo, [nodo.valor]
         if valor < nodo.valor:
             n, c = self.buscar(valor, nodo.izq, False)
         else:
@@ -268,82 +218,63 @@ class ArbolAVL:
         return n, [nodo.valor] + c
 
     def eliminar(self, valor):
-        self.raiz, ok = self._elim(self.raiz, valor)
-        return ok
+        self.raiz, ok = self._elim(self.raiz, valor); return ok
 
     def _elim(self, nodo, valor):
-        if not nodo:
-            return None, False
+        if nodo is None: return None, False
         if valor < nodo.valor:
-            nodo.izq, d = self._elim(nodo.izq, valor)
-            return self._bal(nodo), d
+            nodo.izq, d = self._elim(nodo.izq, valor); return self._bal(nodo), d
         if valor > nodo.valor:
-            nodo.der, d = self._elim(nodo.der, valor)
-            return self._bal(nodo), d
-        if not nodo.izq and not nodo.der:
-            return None, True
-        if not nodo.izq:
-            return nodo.der, True
-        if not nodo.der:
-            return nodo.izq, True
+            nodo.der, d = self._elim(nodo.der, valor); return self._bal(nodo), d
+        if not nodo.izq and not nodo.der: return None, True
+        if not nodo.izq: return nodo.der, True
+        if not nodo.der: return nodo.izq, True
         s = self._minimo(nodo.der)
         nodo.valor = s.valor
         nodo.der, _ = self._elim(nodo.der, s.valor)
         return self._bal(nodo), True
 
     def _minimo(self, n):
-        while n.izq:
-            n = n.izq
-        return n
+        while n.izq: n = n.izq; return n
 
     def preorden(self, n=None, p=True):
-        if p:
-            n = self.raiz
-        if not n:
-            return []
+        if p: n = self.raiz
+        if n is None: return []
         return [n.valor] + self.preorden(n.izq, False) + self.preorden(n.der, False)
 
     def inorden(self, n=None, p=True):
-        if p:
-            n = self.raiz
-        if not n:
-            return []
+        if p: n = self.raiz
+        if n is None: return []
         return self.inorden(n.izq, False) + [n.valor] + self.inorden(n.der, False)
 
     def postorden(self, n=None, p=True):
-        if p:
-            n = self.raiz
-        if not n:
-            return []
+        if p: n = self.raiz
+        if n is None: return []
         return self.postorden(n.izq, False) + self.postorden(n.der, False) + [n.valor]
 
     def altura(self, n=None, p=True):
-        if p:
-            return self._h(self.raiz)
+        if p: return self._h(self.raiz)
         return self._h(n)
 
     def total(self, n=None, p=True):
-        if p:
-            n = self.raiz
-        if not n:
-            return 0
+        if p: n = self.raiz
+        if n is None: return 0
         return 1 + self.total(n.izq, False) + self.total(n.der, False)
 
     def a_lista(self, n=None, p=True):
-        if p:
-            n = self.raiz
-        if not n:
-            return []
+        if p: n = self.raiz
+        if n is None: return []
         return [n.valor] + self.a_lista(n.izq, False) + self.a_lista(n.der, False)
 
     def limpiar(self):
         self.raiz = None
 
 class CanvasArbol(QWidget):
-    RADIO = 24
+
+    RADIO    = 24
     RADIO_HJ = 20
-    GAP_V = 82
-    MARGEN = 56
+    GAP_V    = 82
+    MARGEN   = 56
     INICIO_Y = 52
 
     def __init__(self):
@@ -351,44 +282,76 @@ class CanvasArbol(QWidget):
         self.setMinimumSize(400, 300)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.setStyleSheet(f"background: {P['fondo_deep']};")
-        self.arbol = None
+        self.arbol      = None
         self.resaltados = []
         self.encontrado = None
+        self._pos_cache = {}
 
-    def actualizar(self, arbol, resaltados, encontrado):
-        self.arbol = arbol
-        self.resaltados = resaltados or []
-        self.encontrado = encontrado
+    def actualizar(self, arbol, resaltados=None, encontrado=None):
+        self.arbol      = arbol
+        self.resaltados  = resaltados or []
+        self.encontrado  = encontrado
+        self._recalcular_tamano()
         self.update()
+
+    def _recalcular_tamano(self):
+        """Recalcula el tamaño necesario del canvas y lo aplica."""
+        if not self.arbol or not self.arbol.raiz:
+            self.setMinimumSize(400, 300)
+            return
+        W = max(self.width(), 800)
+        pos = {}
+        self._calcular(self.arbol.raiz, pos, W, self.INICIO_Y, self.GAP_V)
+        self._pos_cache = pos
+        if pos:
+            max_y = max(y for (_, _, y) in pos.values())
+            max_x = max(x for (_, x, _) in pos.values())
+            min_x = min(x for (_, x, _) in pos.values())
+            needed_h = int(max_y + self.RADIO + 40)
+            needed_w = int(max(max_x + self.RADIO + self.MARGEN, 400))
+            self.setMinimumSize(needed_w, needed_h)
 
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
+
         if not self.arbol or not self.arbol.raiz:
-            self._pintar_vacio(painter)
-            return
-        pos = self._calcular()
+            self._pintar_vacio(painter); return
+
+        W = self.width()
+        pos = {}
+        self._calcular(self.arbol.raiz, pos, W, self.INICIO_Y, self.GAP_V)
+
+        if pos:
+            max_y = max(y for (_, _, y) in pos.values())
+            needed_h = int(max_y + self.RADIO + 40)
+            max_x = max(x for (_, x, _) in pos.values())
+            needed_w = int(max(max_x + self.RADIO + self.MARGEN, 400))
+            if self.minimumHeight() < needed_h or self.minimumWidth() < needed_w:
+                self.setMinimumSize(needed_w, needed_h)
+
         self._pintar_aristas(painter, self.arbol.raiz, pos)
         self._pintar_nodos(painter, pos)
 
     def _pintar_vacio(self, p):
         p.setPen(QColor(P["texto_apag"]))
         p.setFont(QFont("Segoe UI", 12))
-        p.drawText(self.rect(), Qt.AlignCenter, "Árbol vacío\nInserta un valor")
+        p.drawText(self.rect(), Qt.AlignCenter,"Arbol vacio\nInserta un valor para comenzar")
 
-    def _calcular(self):
+    def _calcular(self, raiz, pos, W, top, gap):
         SEP = self.RADIO * 2 + 24
+
         col = [0]
         def asignar_col(n):
-            if not n: return
+            if n is None: return
             asignar_col(n.izq)
             n._col = float(col[0])
             col[0] += 1
             asignar_col(n.der)
-        asignar_col(self.arbol.raiz)
+        asignar_col(raiz)
 
         def centrar(n):
-            if not n: return
+            if n is None: return
             centrar(n.izq)
             centrar(n.der)
             if n.izq and n.der:
@@ -399,129 +362,289 @@ class CanvasArbol(QWidget):
             elif n.der:
                 n._col = n.der._col - 0.5
                 n.der._col = n._col + 0.5
-        centrar(self.arbol.raiz)
+        centrar(raiz)
 
-        niveles = []
-        def recoger(n, prof):
-            if not n: return
-            niveles.append((n, prof))
-            recoger(n.izq, prof+1)
-            recoger(n.der, prof+1)
-        recoger(self.arbol.raiz, 0)
+        todos_col = []
+        def recoger(n, p):
+            if n is None: return
+            todos_col.append((n, p))
+            recoger(n.izq, p+1)
+            recoger(n.der, p+1)
+        recoger(raiz, 0)
 
-        min_col = min(n._col for n, _ in niveles)
-        for n, _ in niveles:
+        min_col = min(n._col for n, _ in todos_col)
+        for n, _ in todos_col:
             n._col -= min_col
 
-        cx = self.width() / 2.0
-        rc = self.arbol.raiz._col
-        pos = {}
-        for n, prof in niveles:
+        cx = W / 2.0
+        rc = raiz._col
+
+        for n, prof in todos_col:
             px = cx + (n._col - rc) * SEP
-            py = self.INICIO_Y + prof * self.GAP_V
+            py = top + prof * gap
             pos[id(n)] = (n.valor, px, py)
-        return pos
+
+    def _contar(self, n):
+        if n is None: return 0
+        return 1 + self._contar(n.izq) + self._contar(n.der)
 
     def _pintar_aristas(self, painter, nodo, pos):
-        if not nodo: return
-        datos = pos.get(id(nodo))
-        if not datos: return
-        _, x1, y1 = datos
+        if nodo is None: return
+        entry = pos.get(id(nodo))
+        if not entry: return
+        _, x1, y1 = entry
+
         for hijo in (nodo.izq, nodo.der):
             if hijo:
-                hdat = pos.get(id(hijo))
-                if hdat:
-                    _, x2, y2 = hdat
-                    resalt = nodo.valor in self.resaltados and hijo.valor in self.resaltados
-                    color = QColor(P["violeta"]) if resalt else QColor(P["borde_sb"])
-                    grosor = 2.2 if resalt else 1.4
-                    ang = math.atan2(y2 - y1, x2 - x1)
-                    R = self.RADIO
-                    painter.setPen(QPen(color, grosor, Qt.SolidLine, Qt.RoundCap))
-                    painter.drawLine(
-                        QPointF(x1 + R * math.cos(ang), y1 + R * math.sin(ang)),
-                        QPointF(x2 - R * math.cos(ang), y2 - R * math.sin(ang))
-                    )
-                    self._pintar_aristas(painter, hijo, pos)
+                hijo_entry = pos.get(id(hijo))
+                if not hijo_entry: continue
+                _, x2, y2 = hijo_entry
+                resalt  = nodo.valor in self.resaltados and hijo.valor in self.resaltados
+                color   = QColor(P["violeta"]) if resalt else QColor(P["borde_sb"])
+                grosor  = 2.2 if resalt else 1.4
+                ang     = math.atan2(y2 - y1, x2 - x1)
+                R       = self.RADIO
+
+                painter.setPen(QPen(color, grosor, Qt.SolidLine, Qt.RoundCap))
+                painter.drawLine(
+                    QPointF(x1 + R * math.cos(ang), y1 + R * math.sin(ang)),
+                    QPointF(x2 - R * math.cos(ang), y2 - R * math.sin(ang))
+                )
+                self._pintar_aristas(painter, hijo, pos)
 
     def _pintar_nodos(self, painter, pos):
         for nid, (valor, x, y) in pos.items():
-            resalt = valor in self.resaltados
-            encontrado = (valor == self.encontrado)
+            resalt  = valor in self.resaltados
+            encontr = valor == self.encontrado
             nodo_real = self._buscar_nodo_por_id(self.arbol.raiz, nid)
-            es_hoja = nodo_real and not nodo_real.izq and not nodo_real.der
-            if encontrado:
+            es_hoja = (nodo_real is not None and not nodo_real.izq and not nodo_real.der)
+
+            if encontr:
                 relleno = QColor(P["violeta"])
-                borde = QColor(P["lila"])
-                txt = QColor(P["lila_claro"])
-                grosor = 2.5
-                R = self.RADIO
+                borde   = QColor(P["lila"])
+                txt     = QColor(P["lila_claro"])
+                grosor  = 2.5
+                R       = self.RADIO
             elif resalt:
                 relleno = QColor(P["fondo_card"])
-                borde = QColor(P["violeta"])
-                txt = QColor(P["lila"])
-                grosor = 2.0
-                R = self.RADIO
+                borde   = QColor(P["violeta"])
+                txt     = QColor(P["lila"])
+                grosor  = 2.0
+                R       = self.RADIO
             else:
                 relleno = QColor(P["nodo_normal"])
-                borde = QColor(P["borde_normal"])
-                txt = QColor(P["texto_med"])
-                grosor = 1.5
-                R = self.RADIO_HJ if es_hoja else self.RADIO
-            if resalt or encontrado:
+                borde   = QColor(P["borde_normal"])
+                txt     = QColor(P["texto_med"])
+                grosor  = 1.5
+                R       = self.RADIO_HJ if es_hoja else self.RADIO
+
+            if resalt or encontr:
                 glow = QColor(P["violeta"])
                 glow.setAlpha(30)
                 painter.setPen(Qt.NoPen)
                 painter.setBrush(QBrush(glow))
                 painter.drawEllipse(QPointF(x, y), R + 7, R + 7)
+
             painter.setPen(QPen(borde, grosor))
             painter.setBrush(QBrush(relleno))
             painter.drawEllipse(QPointF(x, y), R, R)
+
             painter.setPen(txt)
             painter.setFont(QFont("Segoe UI", 11, QFont.Medium))
-            painter.drawText(QRectF(x - R, y - R, R*2, R*2), Qt.AlignCenter, str(valor))
-            if isinstance(self.arbol, ArbolAVL) and nodo_real:
-                bf = self.arbol._bf(nodo_real)
-                painter.setPen(QColor(P["lila"]) if abs(bf)>1 else QColor(P["texto_apag"]))
-                painter.setFont(QFont("Segoe UI", 7))
-                painter.drawText(int(x + R + 4), int(y - R + 10), f"bf{bf:+d}")
+            painter.drawText(
+                QRectF(x - R, y - R, R * 2, R * 2),
+                Qt.AlignCenter, str(valor)
+            )
+
+            if isinstance(self.arbol, ArbolAVL):
+                if nodo_real:
+                    bf = self.arbol._bf(nodo_real)
+                    color_bf = QColor(P["lila"]) if abs(bf) > 1 else QColor(P["texto_apag"])
+                    painter.setPen(color_bf)
+                    painter.setFont(QFont("Segoe UI", 7))
+                    painter.drawText(int(x + R + 4), int(y - R + 10), f"bf{bf:+d}")
+
+    def _es_hoja(self, nodo, valor):
+        if nodo is None: return False
+        if nodo.valor == valor: return not nodo.izq and not nodo.der
+        if self._es_hoja(nodo.izq, valor): return True
+        return self._es_hoja(nodo.der, valor)
+
+    def _buscar_nodo(self, nodo, valor):
+        if nodo is None: return None
+        if nodo.valor == valor: return nodo
+        izq = self._buscar_nodo(nodo.izq, valor)
+        if izq: return izq
+        return self._buscar_nodo(nodo.der, valor)
 
     def _buscar_nodo_por_id(self, nodo, nid):
-        if not nodo: return None
+        if nodo is None: return None
         if id(nodo) == nid: return nodo
         izq = self._buscar_nodo_por_id(nodo.izq, nid)
         if izq: return izq
         return self._buscar_nodo_por_id(nodo.der, nid)
 
+def crear_boton(texto, variante="principal"):
+    btn = QPushButton(texto)
+    btn.setCursor(Qt.PointingHandCursor)
+
+    estilos = {
+        "principal": f"""
+            QPushButton {{
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 {P['violeta']}, stop:1 {P['violeta_med']});
+                color: {P['lila_claro']};
+                border: none;
+                border-radius: 8px;
+                padding: 9px 14px;
+                font-size: 12px;
+                font-weight: 600;
+                text-align: center;
+                letter-spacing: 0.03em;
+            }}
+            QPushButton:hover  {{
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #8B5CF6, stop:1 {P['violeta']});
+            }}
+            QPushButton:pressed {{ background: #5B21B6; padding-top: 10px; }}
+        """,
+        "secundario": f"""
+            QPushButton {{
+                background: {P['fondo_card']};
+                color: {P['lila']};
+                border: 1.5px solid {P['borde_normal']};
+                border-radius: 8px;
+                padding: 9px 14px;
+                font-size: 12px;
+                font-weight: 600;
+                text-align: center;
+                letter-spacing: 0.03em;
+            }}
+            QPushButton:hover  {{
+                background: #352F60;
+                border-color: {P['violeta']};
+                color: {P['lila_claro']};
+            }}
+            QPushButton:pressed {{ background: {P['borde_normal']}; padding-top: 10px; }}
+        """,
+        "neutro": f"""
+            QPushButton {{
+                background: transparent;
+                color: {P['texto_apag']};
+                border: 1px solid {P['borde_sb']};
+                border-radius: 8px;
+                padding: 9px 14px;
+                font-size: 12px;
+                font-weight: 500;
+                text-align: center;
+                letter-spacing: 0.03em;
+            }}
+            QPushButton:hover  {{ background: {P['fondo_sb']}; color: {P['texto_med']}; border-color: {P['borde_normal']}; }}
+            QPushButton:pressed {{ background: {P['borde_sb']}; }}
+        """,
+    }
+    btn.setStyleSheet(estilos.get(variante, estilos["neutro"]))
+    return btn
+
+
+def crear_entrada(placeholder):
+    e = QLineEdit()
+    e.setPlaceholderText(placeholder)
+    e.setStyleSheet(f"""
+        QLineEdit {{
+            background: {P['borde_sb']};
+            border: 1px solid {P['borde_normal']};
+            border-radius: 7px;
+            padding: 7px 10px;
+            font-size: 11px;
+            color: {P['lila_claro']};
+            font-family: Consolas, monospace;
+        }}
+        QLineEdit:focus {{
+            border: 1.5px solid {P['violeta']};
+            background: {P['fondo_card']};
+        }}
+    """)
+    return e
+
+
+def label_seccion(texto):
+    lbl = QLabel(texto.upper())
+    lbl.setStyleSheet(f"""
+        color: {P['texto_apag']};
+        font-size: 9px;
+        font-weight: 500;
+        letter-spacing: 0.1em;
+        padding: 12px 6px 3px;
+    """)
+    return lbl
+
+
+def separador():
+    linea = QFrame()
+    linea.setFrameShape(QFrame.HLine)
+    linea.setStyleSheet(f"color: {P['borde_sb']}; margin: 3px 6px;")
+    return linea
+
+
 class SelectorTipo(QWidget):
-    OPCIONES = [("Binario", "Por nivel"), ("BST", "Búsqueda"), ("AVL", "Balanceado")]
+    OPCIONES = [
+        ("Binario", "Por nivel"),
+        ("BST",     "Busqueda"),
+        ("AVL",     "Balanceado"),
+    ]
+
     def __init__(self, al_cambiar):
         super().__init__()
-        self.seleccion = "BST"
+        self.seleccion  = "BST"
         self.al_cambiar = al_cambiar
-        self.chips = {}
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(0,0,0,0)
-        layout.setSpacing(4)
+        self.chips      = {}
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(8, 0, 8, 0)
+        layout.setSpacing(2)
+
         for nombre, desc in self.OPCIONES:
-            chip = self._hacer_chip(nombre)
+            chip = self._hacer_chip(nombre, desc)
             layout.addWidget(chip)
             self.chips[nombre] = chip
+
         self._refrescar()
 
-    def _hacer_chip(self, nombre):
+    def _hacer_chip(self, nombre, desc):
         chip = QFrame()
+        chip.setObjectName(nombre)
         chip.setCursor(Qt.PointingHandCursor)
-        chip.setFixedHeight(34)
+        chip.setFixedHeight(46)
+
         layout = QHBoxLayout(chip)
-        layout.setContentsMargins(10,0,10,0)
-        layout.setSpacing(6)
+        layout.setContentsMargins(10, 0, 10, 0)
+        layout.setSpacing(8)
+
         dot = QLabel()
-        dot.setFixedSize(8,8)
-        lbl = QLabel(nombre)
+        dot.setFixedSize(10, 10)
+        dot.setObjectName(f"dot_{nombre}")
+
+        col = QWidget()
+        col.setStyleSheet("background: transparent;")
+        col_l = QVBoxLayout(col)
+        col_l.setContentsMargins(0, 0, 0, 0)
+        col_l.setSpacing(0)
+
+        lbl_n = QLabel(nombre)
+        lbl_n.setObjectName(f"lbl_{nombre}")
+        lbl_d = QLabel(desc)
+        lbl_d.setStyleSheet(f"font-size: 10px; color: {P['texto_apag']};")
+        col_l.addWidget(lbl_n)
+        col_l.addWidget(lbl_d)
+
         layout.addWidget(dot)
-        layout.addWidget(lbl)
-        chip.mousePressEvent = lambda e, n=nombre: self._seleccionar(n)
+        layout.addWidget(col)
+        layout.addStretch()
+
+        for w in (chip, dot, col, lbl_n, lbl_d):
+            w.mousePressEvent = lambda e, n=nombre: self._seleccionar(n)
+
         return chip
 
     def _seleccionar(self, nombre):
@@ -532,28 +655,217 @@ class SelectorTipo(QWidget):
     def _refrescar(self):
         for nombre, chip in self.chips.items():
             activo = nombre == self.seleccion
-            dot = chip.findChild(QLabel)
-            lbl = chip.findChildren(QLabel)[1]
+            dot    = chip.findChild(QLabel, f"dot_{nombre}")
+            lbl    = chip.findChild(QLabel, f"lbl_{nombre}")
+
             if activo:
-                chip.setStyleSheet(f"background: {P['fondo_card']}; border: 1px solid {P['violeta']}; border-radius: 7px;")
-                dot.setStyleSheet(f"background: {P['violeta']}; border-radius: 4px;")
-                lbl.setStyleSheet(f"font-size: 11px; font-weight: 500; color: {P['lila']};")
+                chip.setStyleSheet(f"""
+                    QFrame {{
+                        background: {P['fondo_card']};
+                        border: 1px solid {P['violeta']};
+                        border-radius: 8px;
+                    }}
+                """)
+                if dot: dot.setStyleSheet(f"""
+                    background: {P['violeta']};
+                    border-radius: 5px;
+                """)
+                if lbl: lbl.setStyleSheet(f"font-size: 12px; font-weight: 500; color: {P['lila']};")
             else:
-                chip.setStyleSheet(f"background: transparent; border: 1px solid {P['borde_sb']}; border-radius: 7px;")
-                dot.setStyleSheet(f"background: transparent; border: 1.5px solid {P['texto_apag']}; border-radius: 4px;")
-                lbl.setStyleSheet(f"font-size: 11px; font-weight: 500; color: {P['texto_med']};")
+                chip.setStyleSheet(f"""
+                    QFrame {{
+                        background: transparent;
+                        border: 1px solid {P['borde_sb']};
+                        border-radius: 8px;
+                    }}
+                    QFrame:hover {{ background: {P['fondo_sb']}; }}
+                """)
+                if dot: dot.setStyleSheet(f"""
+                    background: transparent;
+                    border: 1.5px solid {P['texto_apag']};
+                    border-radius: 5px;
+                """)
+                if lbl: lbl.setStyleSheet(f"font-size: 12px; font-weight: 500; color: {P['texto_med']};")
+
+
+class SelectorTipoIconos(QWidget):
+    OPCIONES = [
+        ("Binario", "⋈", "Por nivel"),
+        ("BST",     "⟨⟩", "Busqueda"),
+        ("AVL",     "△", "Balanceado"),
+    ]
+
+    def __init__(self, al_cambiar):
+        super().__init__()
+        self.seleccion  = "BST"
+        self.al_cambiar = al_cambiar
+        self.chips      = {}
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(4)
+
+        for nombre, icono, desc in self.OPCIONES:
+            chip = self._hacer_chip(nombre, icono, desc)
+            layout.addWidget(chip)
+            self.chips[nombre] = chip
+
+        self._refrescar()
+
+    def _hacer_chip(self, nombre, icono, desc):
+        chip = QFrame()
+        chip.setObjectName(nombre)
+        chip.setCursor(Qt.PointingHandCursor)
+
+        layout = QVBoxLayout(chip)
+        layout.setContentsMargins(6, 8, 6, 8)
+        layout.setSpacing(2)
+        layout.setAlignment(Qt.AlignCenter)
+
+        lbl_ico = QLabel(icono)
+        lbl_ico.setObjectName(f"ico_{nombre}")
+        lbl_ico.setAlignment(Qt.AlignCenter)
+        lbl_ico.setStyleSheet("font-size: 16px; background: transparent;")
+
+        lbl_n = QLabel(nombre)
+        lbl_n.setObjectName(f"lbl_{nombre}")
+        lbl_n.setAlignment(Qt.AlignCenter)
+        lbl_n.setStyleSheet(f"font-size: 10px; font-weight: 500; color: {P['texto_med']}; background: transparent;")
+
+        layout.addWidget(lbl_ico)
+        layout.addWidget(lbl_n)
+
+        for w in (chip, lbl_ico, lbl_n):
+            w.mousePressEvent = lambda e, n=nombre: self._seleccionar(n)
+
+        return chip
+
+    def _seleccionar(self, nombre):
+        self.seleccion = nombre
+        self._refrescar()
+        self.al_cambiar()
+
+    def _refrescar(self):
+        for nombre, chip in self.chips.items():
+            activo = nombre == self.seleccion
+            lbl = chip.findChild(QLabel, f"lbl_{nombre}")
+
+            if activo:
+                chip.setStyleSheet(f"""
+                    QFrame {{
+                        background: {P['fondo_card']};
+                        border: 1px solid {P['violeta']};
+                        border-radius: 8px;
+                    }}
+                """)
+                if lbl: lbl.setStyleSheet(f"font-size: 10px; font-weight: 600; color: {P['lila']}; background: transparent;")
+            else:
+                chip.setStyleSheet(f"""
+                    QFrame {{
+                        background: {P['fondo_panel']};
+                        border: 1px solid {P['borde_sb']};
+                        border-radius: 8px;
+                    }}
+                    QFrame:hover {{ background: {P['fondo_card']}; }}
+                """)
+                if lbl: lbl.setStyleSheet(f"font-size: 10px; font-weight: 500; color: {P['texto_med']}; background: transparent;")
+
+
+class SelectorTipoHorizontal(QWidget):
+    OPCIONES = [
+        ("Binario", "Por nivel"),
+        ("BST",     "Busqueda"),
+        ("AVL",     "Balanceado"),
+    ]
+
+    def __init__(self, al_cambiar):
+        super().__init__()
+        self.seleccion  = "BST"
+        self.al_cambiar = al_cambiar
+        self.chips      = {}
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(4)
+
+        for nombre, desc in self.OPCIONES:
+            chip = self._hacer_chip(nombre, desc)
+            layout.addWidget(chip)
+            self.chips[nombre] = chip
+
+        self._refrescar()
+
+    def _hacer_chip(self, nombre, desc):
+        chip = QFrame()
+        chip.setObjectName(nombre)
+        chip.setCursor(Qt.PointingHandCursor)
+        chip.setFixedHeight(34)
+
+        layout = QHBoxLayout(chip)
+        layout.setContentsMargins(10, 0, 10, 0)
+        layout.setSpacing(6)
+
+        dot = QLabel()
+        dot.setFixedSize(8, 8)
+        dot.setObjectName(f"dot_{nombre}")
+
+        lbl_n = QLabel(nombre)
+        lbl_n.setObjectName(f"lbl_{nombre}")
+
+        layout.addWidget(dot)
+        layout.addWidget(lbl_n)
+
+        for w in (chip, dot, lbl_n):
+            w.mousePressEvent = lambda e, n=nombre: self._seleccionar(n)
+
+        return chip
+
+    def _seleccionar(self, nombre):
+        self.seleccion = nombre
+        self._refrescar()
+        self.al_cambiar()
+
+    def _refrescar(self):
+        for nombre, chip in self.chips.items():
+            activo = nombre == self.seleccion
+            dot    = chip.findChild(QLabel, f"dot_{nombre}")
+            lbl    = chip.findChild(QLabel, f"lbl_{nombre}")
+
+            if activo:
+                chip.setStyleSheet(f"""
+                    QFrame {{
+                        background: {P['fondo_card']};
+                        border: 1px solid {P['violeta']};
+                        border-radius: 7px;
+                    }}
+                """)
+                if dot: dot.setStyleSheet(f"background: {P['violeta']}; border-radius: 4px;")
+                if lbl: lbl.setStyleSheet(f"font-size: 11px; font-weight: 500; color: {P['lila']};")
+            else:
+                chip.setStyleSheet(f"""
+                    QFrame {{
+                        background: transparent;
+                        border: 1px solid {P['borde_sb']};
+                        border-radius: 7px;
+                    }}
+                    QFrame:hover {{ background: {P['fondo_sb']}; }}
+                """)
+                if dot: dot.setStyleSheet(f"background: transparent; border: 1.5px solid {P['texto_apag']}; border-radius: 4px;")
+                if lbl: lbl.setStyleSheet(f"font-size: 11px; font-weight: 500; color: {P['texto_med']};")
+
 
 class FlowTree(QMainWindow):
+
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("FlowTree")
-        self.setMinimumSize(1000, 700)
-        self.resize(1280, 780)
+        self.setWindowTitle("FlowTree — Visualizador de Arboles")
+        self.setMinimumSize(980, 660)
+        self.resize(1260, 740)
 
-        self.arbol = ArbolBST()
-        self.resaltados = []
-        self.encontrado = None
-        self._timer = QTimer()
+        self.arbol      = ArbolBST()
+        self.resaltados  = []
+        self.encontrado  = None
+        self._timer      = QTimer()
         self._timer.timeout.connect(self._limpiar_resaltado)
 
         self._construir_ui()
@@ -561,207 +873,459 @@ class FlowTree(QMainWindow):
         self.showMaximized()
 
     def _construir_ui(self):
+        QApplication.setFont(QFont("Segoe UI", 10))
+
         central = QWidget()
         central.setStyleSheet(f"background: {P['fondo_panel']};")
         self.setCentralWidget(central)
+
         raiz = QVBoxLayout(central)
-        raiz.setContentsMargins(0,0,0,0)
+        raiz.setContentsMargins(0, 0, 0, 0)
         raiz.setSpacing(0)
 
-        top = QFrame()
-        top.setFixedHeight(52)
-        top.setStyleSheet(f"background: {P['fondo_panel']}; border-bottom: 1px solid {P['borde_sb']};")
-        top_lo = QHBoxLayout(top)
-        top_lo.setContentsMargins(16,0,16,0)
-        top_lo.addWidget(QLabel("🌿"))
-        titulo = QLabel("FlowTree v5")
-        titulo.setStyleSheet(f"color: {P['texto_base']}; font-size: 15px; font-weight: 600;")
-        top_lo.addWidget(titulo)
-        top_lo.addSpacing(16)
-        self.selector = SelectorTipo(self._cambiar_tipo)
-        top_lo.addWidget(self.selector)
-        top_lo.addStretch()
-        raiz.addWidget(top)
+        raiz.addWidget(self._topbar())
 
         cuerpo = QHBoxLayout()
-        cuerpo.setContentsMargins(0,0,0,0)
+        cuerpo.setContentsMargins(0, 0, 0, 0)
         cuerpo.setSpacing(0)
-
-        canvas_area = QWidget()
-        canvas_area.setStyleSheet(f"background: {P['fondo_deep']};")
-        canvas_lo = QVBoxLayout(canvas_area)
-        canvas_lo.setContentsMargins(0,0,0,0)
-        canvas_lo.setSpacing(0)
-        canvas_lo.addWidget(self._barra_stats())
-        self.scroll = QScrollArea()
-        self.scroll.setWidgetResizable(True)
-        self.scroll.setFrameShape(QFrame.NoFrame)
-        self.scroll.setStyleSheet("background: transparent; border: none;")
-        self.canvas = CanvasArbol()
-        self.scroll.setWidget(self.canvas)
-        canvas_lo.addWidget(self.scroll, 1)
-        canvas_lo.addWidget(self._barra_resultado())
-        canvas_lo.addWidget(self._panel_inferior())
-        cuerpo.addWidget(canvas_area, 1)
-
+        cuerpo.addWidget(self._area_canvas())
         cuerpo.addWidget(self._sidebar())
         raiz.addLayout(cuerpo)
+
+    def _topbar(self):
+        bar = QFrame()
+        bar.setFixedHeight(52)
+        bar.setStyleSheet(f"""
+            QFrame {{
+                background: {P['fondo_panel']};
+                border-bottom: 1px solid {P['borde_sb']};
+            }}
+        """)
+        layout = QHBoxLayout(bar)
+        layout.setContentsMargins(16, 0, 16, 0)
+        layout.setSpacing(10)
+
+        icono = QLabel("🌿")
+        icono.setStyleSheet("font-size: 18px; background: transparent;")
+
+        titulo = QLabel("FlowTree")
+        titulo.setStyleSheet(f"""
+            color: {P['texto_base']};
+            font-size: 15px;
+            font-weight: 600;
+            background: transparent;
+        """)
+
+        layout.addWidget(icono)
+        layout.addWidget(titulo)
+        layout.addSpacing(16)
+
+        self.selector = SelectorTipoHorizontal(self._cambiar_tipo)
+        layout.addWidget(self.selector)
+
+        layout.addStretch()
+
+        return bar
+
+    def _sidebar(self):
+        contenedor = QFrame()
+        contenedor.setFixedWidth(210)
+        contenedor.setStyleSheet(f"""
+            QFrame {{
+                background: {P['fondo_sb']};
+                border-left: 1px solid {P['borde_sb']};
+            }}
+        """)
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll.setStyleSheet("background: transparent; border: none;")
+        scroll.verticalScrollBar().setStyleSheet(f"""
+            QScrollBar:vertical {{
+                background: {P['fondo_sb']};
+                width: 5px; border-radius: 3px;
+            }}
+            QScrollBar::handle:vertical {{
+                background: {P['borde_normal']};
+                border-radius: 3px;
+            }}
+        """)
+
+        interior = QWidget()
+        interior.setStyleSheet(f"background: {P['fondo_sb']};")
+        layout = QVBoxLayout(interior)
+        layout.setContentsMargins(10, 10, 10, 20)
+        layout.setSpacing(6)
+
+        layout.addWidget(self._label_grupo("Operaciones Individuales"))
+
+        card_ins = self._card()
+        cl = card_ins.layout()
+        cl.addWidget(self._label_sub("Insertar Nodo"))
+        self.ent_insertar = crear_entrada("Valor entero...")
+        self.ent_insertar.returnPressed.connect(self._insertar)
+        cl.addWidget(self.ent_insertar)
+        b_ins = crear_boton("Insertar", "principal")
+        b_ins.clicked.connect(self._insertar)
+        cl.addWidget(b_ins)
+        layout.addWidget(card_ins)
+
+        card_be = self._card()
+        cl2 = card_be.layout()
+        cl2.addWidget(self._label_sub("Buscar / Eliminar Nodo"))
+        self.ent_buscar = crear_entrada("Valor...")
+        cl2.addWidget(self.ent_buscar)
+        fila = QHBoxLayout()
+        fila.setSpacing(6)
+        b_bus = crear_boton("Buscar", "principal")
+        b_bus.clicked.connect(self._buscar)
+        b_eli = crear_boton("Eliminar", "secundario")
+        b_eli.clicked.connect(self._eliminar)
+        fila.addWidget(b_bus)
+        fila.addWidget(b_eli)
+        cl2.addLayout(fila)
+        layout.addWidget(card_be)
+
+        layout.addSpacing(4)
+
+        layout.addWidget(self._label_grupo("Herramientas"))
+
+        card_multi = self._card()
+        cl3 = card_multi.layout()
+        cl3.addWidget(self._label_sub("Insercion Multiple"))
+        hint = QLabel("Separados por coma (ej: 10, 20, 5)")
+        hint.setStyleSheet(f"font-size: 9px; color: {P['texto_apag']};")
+        hint.setWordWrap(True)
+        cl3.addWidget(hint)
+        self.ent_multi = crear_entrada("10, 20, 30...")
+        cl3.addWidget(self.ent_multi)
+        b_multi = crear_boton("Insertar todos", "principal")
+        b_multi.clicked.connect(self._insertar_multi)
+        cl3.addWidget(b_multi)
+        layout.addWidget(card_multi)
+
+        layout.addSpacing(4)
+
+        layout.addWidget(self._label_grupo("Historial de Cambios"))
+        card_hist = self._card()
+        ch = card_hist.layout()
+        self.lbl_historial = QLabel("Sin acciones aun.")
+        self.lbl_historial.setStyleSheet(f"""
+            font-size: 12px;
+            color: {P['texto_med']};
+            font-family: Consolas, monospace;
+        """)
+        self.lbl_historial.setWordWrap(True)
+        ch.addWidget(self.lbl_historial)
+        layout.addWidget(card_hist)
+
+        layout.addStretch()
+        scroll.setWidget(interior)
+
+        sb_layout = QVBoxLayout(contenedor)
+        sb_layout.setContentsMargins(0, 0, 0, 0)
+        sb_layout.addWidget(scroll)
+        return contenedor
+
+    def _label_grupo(self, texto):
+        lbl = QLabel(texto)
+        lbl.setStyleSheet(f"""
+            color: {P['texto_base']};
+            font-size: 11px;
+            font-weight: 600;
+            padding: 6px 2px 2px;
+            background: transparent;
+        """)
+        return lbl
+
+    def _label_sub(self, texto):
+        lbl = QLabel(texto)
+        lbl.setStyleSheet(f"""
+            color: {P['texto_med']};
+            font-size: 10px;
+            font-weight: 500;
+            padding-bottom: 2px;
+            background: transparent;
+        """)
+        return lbl
+
+    def _card(self):
+        frame = QFrame()
+        frame.setStyleSheet(f"""
+            QFrame {{
+                background: {P['fondo_panel']};
+                border: 1px solid {P['borde_sb']};
+                border-radius: 8px;
+            }}
+        """)
+        layout = QVBoxLayout(frame)
+        layout.setContentsMargins(10, 8, 10, 10)
+        layout.setSpacing(6)
+        return frame
+
+    def _area_canvas(self):
+        contenedor = QWidget()
+        contenedor.setStyleSheet(f"background: {P['fondo_deep']};")
+
+        raiz_layout = QVBoxLayout(contenedor)
+        raiz_layout.setContentsMargins(0, 0, 0, 0)
+        raiz_layout.setSpacing(0)
+
+        raiz_layout.addWidget(self._barra_stats())
+
+        self.scroll_canvas = QScrollArea()
+        self.scroll_canvas.setWidgetResizable(True)
+        self.scroll_canvas.setFrameShape(QFrame.NoFrame)
+        self.scroll_canvas.setStyleSheet(f"""
+            QScrollArea {{ background: {P['fondo_deep']}; border: none; }}
+            QScrollBar:vertical {{
+                background: {P['fondo_sb']}; width: 6px; border-radius: 3px;
+            }}
+            QScrollBar::handle:vertical {{
+                background: {P['borde_normal']}; border-radius: 3px;
+            }}
+            QScrollBar:horizontal {{
+                background: {P['fondo_sb']}; height: 6px; border-radius: 3px;
+            }}
+            QScrollBar::handle:horizontal {{
+                background: {P['borde_normal']}; border-radius: 3px;
+            }}
+        """)
+
+        self.canvas = CanvasArbol()
+        self.scroll_canvas.setWidget(self.canvas)
+
+        raiz_layout.addWidget(self.scroll_canvas, 1)
+        raiz_layout.addWidget(self._barra_resultado())
+        raiz_layout.addWidget(self._panel_overlay())
+
+        return contenedor
 
     def _barra_stats(self):
         barra = QFrame()
         barra.setFixedHeight(44)
-        barra.setStyleSheet("background: transparent; border-bottom: 1px solid #2D2B45;")
+        barra.setStyleSheet(f"""
+            QFrame {{
+                background: transparent;
+                border-bottom: 1px solid {P['borde_sb']};
+            }}
+        """)
         layout = QHBoxLayout(barra)
-        layout.setContentsMargins(12,0,12,0)
+        layout.setContentsMargins(12, 0, 12, 0)
+        layout.setSpacing(8)
+
         layout.addStretch()
+
         self.stat_altura = self._chip_stat("ALTURA", "-")
-        self.stat_nodos = self._chip_stat("NODOS", "-")
-        self.stat_raiz = self._chip_stat("RAÍZ", "-")
-        self.stat_tipo = self._chip_stat("TIPO", "BST", True)
+        self.stat_nodos  = self._chip_stat("NODOS",  "-")
+        self.stat_raiz   = self._chip_stat("RAIZ",   "-")
+        self.stat_tipo   = self._chip_stat("TIPO",   "BST", acento=True)
+
         for chip in (self.stat_altura, self.stat_nodos, self.stat_raiz, self.stat_tipo):
             layout.addWidget(chip)
+
         return barra
 
     def _chip_stat(self, label, valor, acento=False):
         chip = QFrame()
         color_borde = P["violeta"] if acento else P["borde_normal"]
-        chip.setStyleSheet(f"background: {P['fondo_card']}; border: 1px solid {color_borde}; border-radius: 6px;")
+        chip.setStyleSheet(f"""
+            QFrame {{
+                background: {P['fondo_card']};
+                border: 1px solid {color_borde};
+                border-radius: 6px;
+            }}
+        """)
         layout = QHBoxLayout(chip)
-        layout.setContentsMargins(10,6,10,6)
+        layout.setContentsMargins(10, 6, 10, 6)
+        layout.setSpacing(6)
+
         lbl = QLabel(label + ":")
-        lbl.setStyleSheet(f"font-size: 9px; color: {P['texto_apag']};")
+        lbl.setStyleSheet(f"font-size: 9px; color: {P['texto_apag']}; font-weight: 500; background: transparent;")
+
         val = QLabel(valor)
         color_val = P["lila"] if acento else P["texto_base"]
-        val.setStyleSheet(f"font-size: 12px; font-weight: 600; color: {color_val};")
+        val.setStyleSheet(f"font-size: 12px; font-weight: 600; color: {color_val}; background: transparent;")
+        val._color = color_val
         chip._lbl_valor = val
+
         layout.addWidget(lbl)
         layout.addWidget(val)
         return chip
 
+    def _celda_stat(self, label, valor, acento=False):
+        return self._chip_stat(label.upper(), valor, acento)
+
+    def _panel_overlay(self):
+        panel = QFrame()
+        panel.setStyleSheet(f"""
+            QFrame {{
+                background: {P['fondo_panel']};
+                border-top: 1px solid {P['borde_sb']};
+            }}
+        """)
+        layout = QHBoxLayout(panel)
+        layout.setContentsMargins(12, 8, 12, 8)
+        layout.setSpacing(12)
+
+        log_frame = QFrame()
+        log_frame.setStyleSheet(f"""
+            QFrame {{
+                background: {P['fondo_sb']};
+                border: 1px solid {P['borde_sb']};
+                border-radius: 8px;
+            }}
+        """)
+        log_layout = QVBoxLayout(log_frame)
+        log_layout.setContentsMargins(10, 8, 10, 10)
+        log_layout.setSpacing(4)
+
+        log_titulo = QLabel("Registro de Actividad")
+        log_titulo.setStyleSheet(f"font-size: 11px; font-weight: 600; color: {P['texto_base']}; background: transparent;")
+        log_layout.addWidget(log_titulo)
+
+        self._log_labels = []
+        for _ in range(4):
+            lbl_log = QLabel("—")
+            lbl_log.setStyleSheet(f"font-size: 9px; color: {P['texto_apag']}; background: transparent; padding: 1px 0;")
+            lbl_log.setWordWrap(True)
+            log_layout.addWidget(lbl_log)
+            self._log_labels.append(lbl_log)
+
+        layout.addWidget(log_frame, 1)
+
+        rec_frame = QFrame()
+        rec_frame.setFixedWidth(290)
+        rec_frame.setStyleSheet(f"""
+            QFrame {{
+                background: {P['fondo_sb']};
+                border: 1px solid {P['borde_sb']};
+                border-radius: 8px;
+            }}
+        """)
+        rec_layout = QVBoxLayout(rec_frame)
+        rec_layout.setContentsMargins(10, 8, 10, 10)
+        rec_layout.setSpacing(6)
+
+        rec_titulo = QLabel("Recorridos")
+        rec_titulo.setStyleSheet(f"font-size: 11px; font-weight: 600; color: {P['texto_base']}; background: transparent;")
+        rec_layout.addWidget(rec_titulo)
+
+        fila_rec = QHBoxLayout()
+        fila_rec.setSpacing(6)
+        for texto, metodo in [
+            ("Preorden",  self._preorden),
+            ("Inorden",   self._inorden),
+            ("Postorden", self._postorden),
+        ]:
+            b = QPushButton(texto)
+            b.setCursor(Qt.PointingHandCursor)
+            b.setFixedHeight(36)
+            b.setStyleSheet(f"""
+                QPushButton {{
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                        stop:0 {P['fondo_card']}, stop:1 #252245);
+                    color: {P['lila']};
+                    border: 1.5px solid {P['borde_normal']};
+                    border-radius: 8px;
+                    font-size: 10px;
+                    font-weight: 600;
+                    text-align: center;
+                    letter-spacing: 0.04em;
+                }}
+                QPushButton:hover {{
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                        stop:0 #3D3470, stop:1 {P['fondo_card']});
+                    border-color: {P['violeta']};
+                    color: {P['lila_claro']};
+                }}
+                QPushButton:pressed {{
+                    background: {P['borde_normal']};
+                    padding-top: 2px;
+                }}
+            """)
+            b.clicked.connect(metodo)
+            fila_rec.addWidget(b)
+        rec_layout.addLayout(fila_rec)
+
+        arch_titulo = QLabel("Archivo")
+        arch_titulo.setStyleSheet(f"font-size: 10px; font-weight: 600; color: {P['texto_apag']}; background: transparent; padding-top:4px;")
+        rec_layout.addWidget(arch_titulo)
+        fila_arch = QHBoxLayout()
+        fila_arch.setSpacing(6)
+        for texto, metodo in [("Guardar", self._guardar), ("Cargar", self._cargar), ("Limpiar", self._limpiar)]:
+            b2 = QPushButton(texto)
+            b2.setCursor(Qt.PointingHandCursor)
+            b2.setFixedHeight(30)
+            b2.setStyleSheet(f"""
+                QPushButton {{
+                    background: transparent;
+                    color: {P['texto_apag']};
+                    border: 1px solid {P['borde_sb']};
+                    border-radius: 7px;
+                    font-size: 9px;
+                    font-weight: 500;
+                    text-align: center;
+                    letter-spacing: 0.03em;
+                }}
+                QPushButton:hover {{
+                    background: {P['fondo_sb']};
+                    color: {P['texto_med']};
+                    border-color: {P['borde_normal']};
+                }}
+                QPushButton:pressed {{ background: {P['borde_sb']}; }}
+            """)
+            b2.clicked.connect(metodo)
+            fila_arch.addWidget(b2)
+        rec_layout.addLayout(fila_arch)
+
+        layout.addWidget(rec_frame)
+
+        return panel
+
     def _barra_resultado(self):
         barra = QFrame()
         barra.setFixedHeight(32)
-        barra.setStyleSheet(f"background: {P['fondo_panel']}; border-top: 1px solid {P['borde_sb']};")
+        barra.setStyleSheet(f"""
+            QFrame {{
+                background: {P['fondo_panel']};
+                border-top: 1px solid {P['borde_sb']};
+            }}
+        """)
         layout = QHBoxLayout(barra)
-        layout.setContentsMargins(14,0,14,0)
+        layout.setContentsMargins(14, 0, 14, 0)
+        layout.setSpacing(8)
+
         tag = QLabel("Resultado:")
-        tag.setStyleSheet(f"font-size: 9px; color: {P['texto_apag']};")
+        tag.setStyleSheet(f"font-size: 9px; color: {P['texto_apag']}; font-weight: 500; background: transparent;")
+
         self.lbl_resultado = QLabel("—")
-        self.lbl_resultado.setStyleSheet(f"font-size: 10px; color: {P['texto_med']}; font-family: monospace;")
+        self.lbl_resultado.setStyleSheet(f"""
+            font-size: 10px;
+            color: {P['texto_med']};
+            font-family: Consolas, monospace;
+            background: transparent;
+        """)
+
         layout.addWidget(tag)
         layout.addWidget(self.lbl_resultado)
         layout.addStretch()
         return barra
 
-    def _panel_inferior(self):
-        panel = QFrame()
-        panel.setStyleSheet(f"background: {P['fondo_panel']}; border-top: 1px solid {P['borde_sb']};")
-        layout = QHBoxLayout(panel)
-        layout.setContentsMargins(12,8,12,8)
-        layout.setSpacing(12)
-
-        log_frame = QFrame()
-        log_frame.setStyleSheet(f"background: {P['fondo_sb']}; border: 1px solid {P['borde_sb']}; border-radius: 8px;")
-        log_layout = QVBoxLayout(log_frame)
-        log_layout.setContentsMargins(10,8,10,10)
-        log_layout.addWidget(QLabel("Registro de Actividad"))
-        self._log_labels = []
-        for _ in range(4):
-            lbl = QLabel("—")
-            lbl.setStyleSheet(f"font-size: 9px; color: {P['texto_apag']};")
-            log_layout.addWidget(lbl)
-            self._log_labels.append(lbl)
-        layout.addWidget(log_frame, 1)
-
-        rec_frame = QFrame()
-        rec_frame.setFixedWidth(280)
-        rec_frame.setStyleSheet(f"background: {P['fondo_sb']}; border: 1px solid {P['borde_sb']}; border-radius: 8px;")
-        rec_layout = QVBoxLayout(rec_frame)
-        rec_layout.setContentsMargins(10,8,10,10)
-        rec_layout.addWidget(QLabel("Recorridos"))
-        btn_layout = QHBoxLayout()
-        for texto, metodo in [("Preorden", self._preorden), ("Inorden", self._inorden), ("Postorden", self._postorden)]:
-            b = QPushButton(texto)
-            b.clicked.connect(metodo)
-            b.setStyleSheet(f"background: {P['fondo_card']}; color: {P['lila']}; border: 1px solid {P['borde_normal']}; border-radius: 6px; padding: 6px;")
-            btn_layout.addWidget(b)
-        rec_layout.addLayout(btn_layout)
-        arch_layout = QHBoxLayout()
-        for texto, metodo in [("Guardar", self._guardar), ("Cargar", self._cargar), ("Limpiar", self._limpiar)]:
-            b = QPushButton(texto)
-            b.clicked.connect(metodo)
-            b.setStyleSheet(f"background: transparent; color: {P['texto_apag']}; border: 1px solid {P['borde_sb']}; border-radius: 6px; padding: 5px;")
-            arch_layout.addWidget(b)
-        rec_layout.addWidget(QLabel("Archivo"))
-        rec_layout.addLayout(arch_layout)
-        layout.addWidget(rec_frame)
-        return panel
-
-    def _sidebar(self):
-        contenedor = QFrame()
-        contenedor.setFixedWidth(220)
-        contenedor.setStyleSheet(f"background: {P['fondo_sb']}; border-left: 1px solid {P['borde_sb']};")
-        layout = QVBoxLayout(contenedor)
-        layout.setContentsMargins(10,20,10,20)
-        layout.setSpacing(12)
-
-        layout.addWidget(QLabel("INSERTAR NODO"))
-        self.ent_insertar = QLineEdit()
-        self.ent_insertar.setPlaceholderText("Valor entero...")
-        self.ent_insertar.returnPressed.connect(self._insertar)
-        self.ent_insertar.setStyleSheet(f"background: {P['borde_sb']}; border-radius: 6px; padding: 6px; color: white;")
-        btn_ins = QPushButton("Insertar")
-        btn_ins.clicked.connect(self._insertar)
-        layout.addWidget(self.ent_insertar)
-        layout.addWidget(btn_ins)
-
-        layout.addWidget(QLabel("BUSCAR / ELIMINAR"))
-        self.ent_buscar = QLineEdit()
-        self.ent_buscar.setPlaceholderText("Valor...")
-        self.ent_buscar.setStyleSheet(f"background: {P['borde_sb']}; border-radius: 6px; padding: 6px; color: white;")
-        btn_bus = QPushButton("Buscar")
-        btn_bus.clicked.connect(self._buscar)
-        btn_eli = QPushButton("Eliminar")
-        btn_eli.clicked.connect(self._eliminar)
-        layout.addWidget(self.ent_buscar)
-        hb = QHBoxLayout()
-        hb.addWidget(btn_bus)
-        hb.addWidget(btn_eli)
-        layout.addLayout(hb)
-
-        layout.addWidget(QLabel("INSERCIÓN MÚLTIPLE"))
-        hint = QLabel("Separados por coma (ej: 10,20,5)")
-        hint.setStyleSheet(f"font-size: 9px; color: {P['texto_apag']};")
-        self.ent_multi = QLineEdit()
-        self.ent_multi.setPlaceholderText("10,20,30...")
-        self.ent_multi.setStyleSheet(f"background: {P['borde_sb']}; border-radius: 6px; padding: 6px; color: white;")
-        btn_multi = QPushButton("Insertar todos")
-        btn_multi.clicked.connect(self._insertar_multi)
-        layout.addWidget(hint)
-        layout.addWidget(self.ent_multi)
-        layout.addWidget(btn_multi)
-
-        layout.addWidget(QLabel("HISTORIAL"))
-        self.lbl_historial = QLabel("Sin acciones aún.")
-        self.lbl_historial.setStyleSheet(f"font-size: 11px; color: {P['texto_med']}; font-family: monospace;")
-        self.lbl_historial.setWordWrap(True)
-        layout.addWidget(self.lbl_historial)
-
-        layout.addStretch()
-        return contenedor
-
     def _insertar(self):
-        try:
-            valor = int(self.ent_insertar.text())
-        except:
-            QMessageBox.warning(self, "Error", "Valor entero válido")
-            return
+        txt = self.ent_insertar.text().strip()
+        if not txt: return
+        try: valor = int(txt)
+        except: QMessageBox.warning(self, "Error", "Ingresa un numero entero valido."); return
+
         camino = self.arbol.insertar(valor)
         self.ent_insertar.clear()
-        self.resaltados = camino
-        self.encontrado = valor
+        self.resaltados  = camino if isinstance(camino, list) else []
+        self.encontrado  = valor
         self._redibujar()
-        self._mostrar(f"Insertado: {valor}  Camino: {' > '.join(map(str, camino))}")
+        self._mostrar(f"Insertado: {valor}   Camino: {' > '.join(map(str, self.resaltados))}")
         self._auto_limpiar(1800)
 
     def _insertar_multi(self):
@@ -772,112 +1336,67 @@ class FlowTree(QMainWindow):
             try:
                 self.arbol.insertar(int(parte.strip()))
                 insertados.append(parte.strip())
-            except: pass
+            except:
+                pass
         self.ent_multi.clear()
-        self.resaltados = []
-        self.encontrado = None
+        self.resaltados = []; self.encontrado = None
         self._redibujar()
         self._mostrar(f"Insertados: {', '.join(insertados)}")
 
     def _buscar(self):
-        try:
-            valor = int(self.ent_buscar.text())
-        except:
-            QMessageBox.warning(self, "Error", "Valor entero válido")
-            return
-        nodo, camino = self.arbol.buscar(valor)
-        self.resaltados = camino
-        self.encontrado = valor if nodo else None
+        txt = self.ent_buscar.text().strip()
+        if not txt: return
+        try: valor = int(txt)
+        except: QMessageBox.warning(self, "Error", "Ingresa un numero entero valido."); return
+
+        nodo, camino    = self.arbol.buscar(valor)
+        self.resaltados  = camino
+        self.encontrado  = valor if nodo else None
         self._redibujar()
         if nodo:
-            self._mostrar(f"Nodo {valor} encontrado  Camino: {' > '.join(map(str, camino))}")
+            self._mostrar(f"Nodo {valor} encontrado   Camino: {' > '.join(map(str, camino))}")
         else:
-            self._mostrar(f"Nodo {valor} no encontrado  Visitados: {' > '.join(map(str, camino))}")
+            self._mostrar(f"Nodo {valor} no encontrado   Visitados: {' > '.join(map(str, camino))}")
         self._auto_limpiar(2500)
 
     def _eliminar(self):
-        try:
-            valor = int(self.ent_buscar.text())
-        except:
-            QMessageBox.warning(self, "Error", "Valor entero válido")
-            return
+        txt = self.ent_buscar.text().strip()
+        if not txt: return
+        try: valor = int(txt)
+        except: QMessageBox.warning(self, "Error", "Ingresa un numero entero valido."); return
+
         ok = self.arbol.eliminar(valor)
         self.ent_buscar.clear()
-        self.resaltados = []
-        self.encontrado = None
+        self.resaltados = []; self.encontrado = None
         self._redibujar()
-        self._mostrar(f"Nodo {valor} {'eliminado' if ok else 'no existe'}")
+        self._mostrar(f"Nodo {valor} {'eliminado.' if ok else 'no existe en el arbol.'}")
 
     def _preorden(self):
-        r = self.arbol.preorden()
-        self.resaltados = r
-        self.encontrado = None
-        self._redibujar()
-        self._auto_limpiar(3000)
+        r = self.arbol.preorden(); self.resaltados = r; self.encontrado = None
+        self._redibujar(); self._auto_limpiar(3000)
         self._mostrar_recorrido("Preorden", r)
 
     def _inorden(self):
-        r = self.arbol.inorden()
-        self.resaltados = r
-        self.encontrado = None
-        self._redibujar()
-        self._auto_limpiar(3000)
+        r = self.arbol.inorden(); self.resaltados = r; self.encontrado = None
+        self._redibujar(); self._auto_limpiar(3000)
         self._mostrar_recorrido("Inorden", r)
 
     def _postorden(self):
-        r = self.arbol.postorden()
-        self.resaltados = r
-        self.encontrado = None
-        self._redibujar()
-        self._auto_limpiar(3000)
+        r = self.arbol.postorden(); self.resaltados = r; self.encontrado = None
+        self._redibujar(); self._auto_limpiar(3000)
         self._mostrar_recorrido("Postorden", r)
 
     def _mostrar_recorrido(self, nombre, resultado):
         if not resultado:
-            self._mostrar(f"{nombre}: árbol vacío")
-        else:
-            self._mostrar(f"{nombre}: {' → '.join(map(str, resultado))}")
+            self._mostrar(f"{nombre}: arbol vacio.")
+            return
+        valores = " → ".join(map(str, resultado))
+        self._mostrar(f"{nombre}: {valores}")
 
     def _limpiar(self):
-        if QMessageBox.question(self, "Limpiar", "¿Limpiar árbol?", QMessageBox.Yes|QMessageBox.No) == QMessageBox.Yes:
-            self.arbol.limpiar()
-            self.resaltados = []
-            self.encontrado = None
-            self._redibujar()
-            self._mostrar("Árbol limpiado")
-
-    def _guardar(self):
-        ruta, _ = QFileDialog.getSaveFileName(self, "Guardar árbol", "", "JSON (*.json)")
-        if ruta:
-            with open(ruta, "w") as f:
-                json.dump({"tipo": self.selector.seleccion, "valores": self.arbol.a_lista()}, f, indent=2)
-            self._mostrar(f"Guardado: {ruta}")
-
-    def _cargar(self):
-        ruta, _ = QFileDialog.getOpenFileName(self, "Cargar árbol", "", "JSON (*.json)")
-        if ruta:
-            try:
-                with open(ruta) as f:
-                    data = json.load(f)
-                tipo = data.get("tipo", "BST")
-                valores = data.get("valores", [])
-                self.selector.seleccion = tipo
-                self.selector._refrescar()
-                if tipo == "Binario":
-                    self.arbol = ArbolBinario()
-                elif tipo == "BST":
-                    self.arbol = ArbolBST()
-                else:
-                    self.arbol = ArbolAVL()
-                for v in valores:
-                    self.arbol.insertar(v)
-                self.resaltados = []
-                self.encontrado = None
-                self.stat_tipo._lbl_valor.setText(tipo)
-                self._redibujar()
-                self._mostrar(f"Cargado: {ruta} ({len(valores)} nodos)")
-            except Exception as e:
-                QMessageBox.critical(self, "Error", f"No se pudo cargar:\n{e}")
+        if QMessageBox.question(self, "Limpiar", "Deseas limpiar el arbol?",QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
+            self.arbol.limpiar(); self.resaltados = []; self.encontrado = None
+            self._redibujar(); self._mostrar("Arbol limpiado.")
 
     def _cambiar_tipo(self):
         tipo = self.selector.seleccion
@@ -887,11 +1406,45 @@ class FlowTree(QMainWindow):
             self.arbol = ArbolBST()
         else:
             self.arbol = ArbolAVL()
+
         self.resaltados = []
         self.encontrado = None
+
         self.stat_tipo._lbl_valor.setText(tipo)
+
         self._redibujar()
+
         self._mostrar(f"Árbol cambiado a: {tipo} (vacío)")
+
+    def _guardar(self):
+        ruta, _ = QFileDialog.getSaveFileName(
+            self, "Guardar arbol", "", "JSON (*.json);;Todos (*.*)")
+        if not ruta: return
+        with open(ruta, "w") as f:
+            json.dump({"tipo": self.selector.seleccion,
+                       "valores": self.arbol.a_lista()}, f, indent=2)
+        self._mostrar(f"Guardado: {ruta}")
+
+    def _cargar(self):
+        ruta, _ = QFileDialog.getOpenFileName(
+            self, "Cargar arbol", "", "JSON (*.json);;Todos (*.*)")
+        if not ruta: return
+        try:
+            with open(ruta) as f: datos = json.load(f)
+            tipo    = datos.get("tipo", "BST")
+            valores = datos.get("valores", [])
+            self.selector.seleccion = tipo
+            self.selector._refrescar()
+            if tipo == "Binario": self.arbol = ArbolBinario()
+            elif tipo == "BST":   self.arbol = ArbolBST()
+            else:                  self.arbol = ArbolAVL()
+            for v in valores: self.arbol.insertar(v)
+            self.resaltados = []; self.encontrado = None
+            self.stat_tipo._lbl_valor.setText(tipo)
+            self._redibujar()
+            self._mostrar(f"Cargado: {ruta}  ({len(valores)} nodos)")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"No se pudo cargar:\n{e}")
 
     def _redibujar(self):
         self.stat_altura._lbl_valor.setText(str(self.arbol.altura()))
@@ -903,29 +1456,28 @@ class FlowTree(QMainWindow):
     def _mostrar(self, texto):
         self.lbl_resultado.setText(texto)
         if hasattr(self, '_log_labels'):
-            for i in range(3,0,-1):
-                self._log_labels[i].setText(self._log_labels[i-1].text())
-            self._log_labels[0].setText(texto[:60])
-        actual = self.lbl_historial.text()
-        if actual == "Sin acciones aún.":
-            self.lbl_historial.setText(texto[:70])
-        else:
-            lineas = actual.split("\n")[:4]
-            self.lbl_historial.setText("\n".join([texto[:70]] + lineas))
+            for i in range(len(self._log_labels) - 1, 0, -1):
+                self._log_labels[i].setText(self._log_labels[i - 1].text())
+            self._log_labels[0].setText(texto[:60] + ("..." if len(texto) > 60 else ""))
+        if hasattr(self, 'lbl_historial'):
+            actual = self.lbl_historial.text()
+            if actual == "Sin acciones aun.":
+                self.lbl_historial.setText(texto[:70])
+            else:
+                lineas = actual.split("\n")[:4]
+                self.lbl_historial.setText("\n".join([texto[:70]] + lineas))
 
     def _auto_limpiar(self, ms):
-        self._timer.start(ms)
+        self._timer.stop(); self._timer.start(ms)
 
     def _limpiar_resaltado(self):
         self._timer.stop()
-        self.resaltados = []
-        self.encontrado = None
+        self.resaltados = []; self.encontrado = None
         self._redibujar()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
-    app.setFont(QFont("Segoe UI", 10))
     ventana = FlowTree()
     ventana.show()
     sys.exit(app.exec_())
